@@ -3,6 +3,7 @@ import type { AppState, Product, SalesLog } from '../config';
 export const STORAGE_KEY = 'jagaproduk_state_v1';
 
 export const DEFAULT_STATE: AppState = {
+  userLoggedIn: false,
   products: [],
   salesLogs: [],
 };
@@ -13,6 +14,7 @@ export function loadState(): AppState {
     if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
     const parsed = JSON.parse(raw);
     return {
+      userLoggedIn: !!parsed.userLoggedIn,
       products: parsed.products || [],
       salesLogs: parsed.salesLogs || [],
     };

@@ -13,21 +13,24 @@ type PageId = 'dashboard' | 'dataPenjualan' | 'logPenjualan' | 'crudData' | 'exp
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 function uid() { return Math.random().toString(36).slice(2, 10); }
-function formatDateId(d) { if(!d) return '-'; return new Date(d+'T00:00:00').toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }); }
-function daysUntil(dateStr) { if(!dateStr) return null; const t=new Date(todayStr+'T00:00:00'), n=new Date(dateStr+'T00:00:00'); return Math.ceil((n.getTime()-t.getTime())/(864e5)); }
+function formatDateId(d: string) { if(!d) return '-'; return new Date(d+'T00:00:00').toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }); }
+function daysUntil(dateStr: string) { if(!dateStr) return null; const t=new Date(todayStr+'T00:00:00'), n=new Date(dateStr+'T00:00:00'); return Math.ceil((n.getTime()-t.getTime())/(864e5)); }
 
-function calcForecast(s) {
+function calcForecast(s: AppState) {
   const now=new Date(), thirty=new Date(now); thirty.setDate(now.getDate()-30);
   const recent=s.salesLogs.filter(l=>new Date(l.date)>=thirty&&new Date(l.date)<=now);
-  const res={};
+  const res: Record<string, {avgPerDay: number, daysUsed: number, note: string}> = {};
   for(const p of s.products) {
     const dates=new Set(recent.filter(l=>l.productId===p.id).map(l=>l.date));
     const d=dates.size;
-    if(d<3) res[p.id]={avgPerDay:0,daysUsed:d,note:'Data kurang (butuh minimal 3 hari penjualan)'};
+    let note = '';
+    let avgPerDay = 0;
+    if(d<3) note = 'Data kurang (butuh minimal 3 hari penjualan)';
     else {
       const total=recent.filter(l=>l.productId===p.id).reduce((a,l)=>a+l.qty,0);
-      res[p.id]={avgPerDay:Math.round(total/d),daysUsed:d,note:''};
+      avgPerDay = Math.round(total/d);
     }
+    res[p.id] = {avgPerDay, daysUsed: d, note};
   }
   return res;
 }
@@ -46,7 +49,7 @@ export default function App() {
   const expired=state.products.filter(p=>{const d=daysUntil(p.expiryDate);return d!==null&&d<0;});
 
   const pageRender=({
-    dashboard:()=><Dashboard state={state} forecasts={forecasts} lowStock={lowStock} near={near} expired={expired}/>,
+    dashboard:()=><DashboardView state={state} forecasts={forecasts} lowStock={lowStock} near={near} expired={expired}/>,
     dataPenjualan:()=>(<SalesDataView state={state} setState={setState}/>),
     logPenjualan:()=>(<SalesLogView state={state} setState={setState}/>),
     crudData:()=>(<CrudView state={state} setState={setState}/>),
@@ -58,18 +61,27 @@ export default function App() {
       <Sidebar activePage={page} onNavigate={setPage} onLogout={()=>{authService.logout();setIsLoggedIn(false)}}/>
       <main className="flex-1 min-w-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <pageRender/>
+          {pageRender()}
         </div>
       </main>
     </div>
   );
 }
 
-function Dashboard({state,forecasts,lowStock,near,expired}) {
-  return(
+export function DashboardView({state,forecasts,lowStock,near,expired}: {state: AppState, forecasts: Record<string, {avgPerDay: number, daysUsed: number, note: string}>, lowStock: Product[], near: Product[], expired: Product[]}) {
+  const lowStockItems = lowStock.map((p) => {
+    const text = p.name + ": stok " + p.stock + " <= min " + p.minStock;
+    return <li key={p.id}>{text}</li>;
+  });
+
+  return (
     <Card title="Dashboard" className="space-y-6">
       <Card title="Stok Minimum" className="space-y-3">
-        {lowStock.length===0?<p className="text-neutral-500">Semua produk aman</p>:(<ul>{lowStock.map(p=><li key={p.id}>{p.name}: stok {p.stock} <= min {p.minStock}</li>)}</ul>)}
+        {lowStock.length === 0 ? (
+          <p className="text-neutral-500">Semua produk aman</p>
+        ) : (
+          <ul>{lowStockItems}</ul>
+        )}
       </Card>
       <Card title="Mendekati Kadaluarsa" className="space-y-3">
         {near.length===0?<p className="text-neutral-500">Baik</p>:(<ul>{near.map(p=><li key={p.id}>{p.name} ({formatDateId(p.expiryDate)})</li>)}</ul>)}
@@ -84,11 +96,11 @@ function Dashboard({state,forecasts,lowStock,near,expired}) {
   );
 }
 
-function SalesDataView({state,setState}) {
+export function SalesDataView({state,setState}: {state: AppState, setState: (s: AppState) => void}) {
   return(<Card title="Data Penjualan" className="p-6"><p className="text-sm text-neutral-500">Tabel data penjualan akan muncul di sini. Total log: {state.salesLogs.length}</p></Card>);
 }
 
-function SalesLogView({state,setState}) {
+export function SalesLogView({state,setState}: {state: AppState, setState: (s: AppState) => void}) {
   return(
     <Card title="Log Penjualan Harian" className="space-y-4">
       <form className="space-y-3">
@@ -103,10 +115,10 @@ function SalesLogView({state,setState}) {
   );
 }
 
-function CrudView({state,setState}) {
+export function CrudView({state,setState}: {state: AppState, setState: (s: AppState) => void}) {
   return(<Card title="CRUD Data Produk" className="p-6"><p className="text-sm text-neutral-500">CRUD interface akan muncul di sini. Produk: {state.products.length}</p></Card>);
 }
 
-function ExportView({state}) {
+export function ExportView({state}: {state: AppState}) {
   return(<Card title="Export Data" className="p-6"><p className="text-sm text-neutral-500">Export CSV akan di-generate di sini. 3 file: penjualan, stok, alert.</p></Card>);
 }

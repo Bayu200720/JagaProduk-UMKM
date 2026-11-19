@@ -22,11 +22,11 @@ export function calculateForecasts(state: AppState): Record<string, ForecastResu
   });
 
   // Group by productId
-  const salesByProduct = recentLogs.reduce((acc, log) => {
+  const salesByProduct: Record<string, number[]> = recentLogs.reduce((acc, log) => {
     if (!acc[log.productId]) acc[log.productId] = [];
     acc[log.productId].push(log.qty);
     return acc;
-  }, Record<string, number[]>);
+  }, {} as Record<string, number[]>);
 
   const results: Record<string, ForecastResult> = {};
 

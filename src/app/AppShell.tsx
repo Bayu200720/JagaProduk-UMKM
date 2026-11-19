@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { Login } from '../components/Login';
+import { DashboardView, SalesDataView, SalesLogView, CrudView, ExportView } from '../App';
 import { authService } from '../auth/auth';
 import { loadState, saveState } from '../lib/storage';
 import type { AppState } from '../config';
@@ -32,11 +33,11 @@ export function AppShell() {
       />
       <main className="flex-1 min-w-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {activePage === 'dashboard' && <DashboardView state={state} />}
-          {activePage === 'dataPenjualan' && <SalesDataView state={state} />}
-          {activePage === 'logPenjualan' && <SalesLogView state={state} setState={setState} />}
-          {activePage === 'crudData' && <CrudView state={state} setState={setState} />}
-          {activePage === 'exportData' && <ExportView state={state} />}
+          {activePage === 'dashboard' && (<DashboardView state={state} forecasts={{}} lowStock={[]} near={[]} expired={[]} /> as any) }
+          {activePage === 'dataPenjualan' && (<SalesDataView state={state} setState={setState} /> as any) }
+          {activePage === 'logPenjualan' && (<SalesLogView state={state} setState={setState} /> as any) }
+          {activePage === 'crudData' && (<CrudView state={state} setState={setState} /> as any) }
+          {activePage === 'exportData' && (<ExportView state={state} /> as any) }
         </div>
       </main>
     </div>
