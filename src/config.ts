@@ -19,14 +19,26 @@ export interface SalesLog {
   qty: number;
 }
 
+export interface UserLogin {
+  username: string;
+  password: string;
+}
+
 export interface AppState {
+  userLoggedIn: boolean;
   products: Product[];
   salesLogs: SalesLog[];
 }
 
 export const STORAGE_KEY = 'jagaproduk_state_v1';
 
+export const STATIC_CREDENTIAL: UserLogin = {
+  username: 'admin',
+  password: 'jaga123',
+};
+
 export const DEFAULT_STATE: AppState = {
+  userLoggedIn: false,
   products: [
     {
       id: 'p1',

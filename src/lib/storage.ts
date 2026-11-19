@@ -9,6 +9,8 @@ export function loadState(): AppState {
     if (!parsed || typeof parsed !== 'object') return structuredClone(DEFAULT_STATE);
     if (!Array.isArray(parsed.products)) parsed.products = structuredClone(DEFAULT_STATE.products);
     if (!Array.isArray(parsed.salesLogs)) parsed.salesLogs = [];
+    // Pastikan userLoggedIn ada, kalau belum set false
+    if (parsed.userLoggedIn === undefined) parsed.userLoggedIn = false;
     return parsed;
   } catch {
     return structuredClone(DEFAULT_STATE);
