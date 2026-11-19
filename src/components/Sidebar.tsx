@@ -1,48 +1,51 @@
 import React from 'react';
+import { Button } from './ui/Button';
 
-export type PageKey = 'dashboard' | 'dataPenjualan' | 'logPenjualan' | 'crudData' | 'exportData';
+type PageId = 'dashboard' | 'dataPenjualan' | 'logPenjualan' | 'crudData' | 'exportData';
 
-interface SidebarProps {
-  activePage: PageKey;
-  onNavigate: (page: PageKey) => void;
+type Props = {
+  activePage: PageId;
+  onNavigate: (page: PageId) => void;
   onLogout: () => void;
-}
+};
 
-const menuItems: { key: PageKey; label: string }[] = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'dataPenjualan', label: 'Data Penjualan' },
-  { key: 'logPenjualan', label: 'Log Penjualan' },
-  { key: 'crudData', label: 'CRUD Data' },
-  { key: 'exportData', label: 'Export Data' },
+const items: { id: PageId; label: string }[] = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'dataPenjualan', label: 'Data Penjualan' },
+  { id: 'logPenjualan', label: 'Log Penjualan' },
+  { id: 'crudData', label: 'CRUD Data' },
+  { id: 'exportData', label: 'Export Data' },
 ];
 
-export function Sidebar({ activePage, onNavigate, onLogout }: SidebarProps) {
+export function Sidebar({ activePage, onNavigate, onLogout }: Props) {
   return (
-    <aside className="w-full lg:w-64 bg-neutral-900 text-white rounded-2xl p-4 lg:min-h-[calc(100vh-8rem)]">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Menu</h2>
-        <button
-          onClick={onLogout}
-          className="text-xs sm:text-sm text-neutral-300 hover:text-white underline underline-offset-2"
-        >
-          Logout
-        </button>
+    <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-white border-r border-neutral-200">
+      <div className="flex flex-col flex-1 min-h-0 pt-6 pb-4">
+        <div className="px-5 mb-6">
+          <h1 className="text-lg font-semibold text-neutral-900 tracking-tight">Jaga Produk</h1>
+          <p className="text-xs text-neutral-500 mt-0.5">UMKM Kopi & Makanan</p>
+        </div>
+        <nav className="flex-1 px-3 space-y-1">
+          {items.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => onNavigate(item.id)}
+              className={`w-full text-left rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                activePage === item.id
+                  ? 'bg-neutral-900 text-white'
+                  : 'text-neutral-700 hover:bg-neutral-100'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <div className="px-3 pt-4 border-t border-neutral-100 mt-4">
+          <Button variant="ghost" onClick={onLogout} className="w-full justify-start text-neutral-600">
+            Keluar
+          </Button>
+        </div>
       </div>
-      <nav className="flex lg:flex-col gap-2 overflow-x-auto pb-1 lg:pb-0">
-        {menuItems.map((item) => (
-          <button
-            key={item.key}
-            onClick={() => onNavigate(item.key)}
-            className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm text-left transition-colors ${
-              activePage === item.key
-                ? 'bg-emerald-600 text-white'
-                : 'bg-neutral-800/60 text-neutral-200 hover:bg-neutral-700'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
     </aside>
   );
 }

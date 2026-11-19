@@ -1,79 +1,77 @@
 import React, { useState } from 'react';
-import type { UserLogin } from '../config';
-import { STATIC_CREDENTIAL } from '../config';
+import { authService } from '../auth/auth';
+import { Button } from './ui/Button';
 
-interface LoginProps {
-  onLoginSuccess: (credentials: UserLogin) => void;
-}
-
-export function Login({ onLoginSuccess }: LoginProps) {
+export function Login({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedUser = username.trim();
-    const trimmedPass = password.trim();
-
-    if (!trimmedUser || !trimmedPass) {
-      setError('Username dan password wajib diisi.');
-      return;
-    }
-
-    if (trimmedUser === STATIC_CREDENTIAL.username && trimmedPass === STATIC_CREDENTIAL.password) {
-      setError('');
-      onLoginSuccess({ username: trimmedUser, password: trimmedPass });
+    if (authService.login({ username, password })) {
+      onLogin();
     } else {
-      setError('Username atau password salah.');
+      setError('Username atau password salah');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-neutral-900">Jaga Produk UMKM</h1>
-          <p className="text-neutral-600 mt-2 text-sm">Masuk untuk mengelola stok dan penjualan Anda</p>
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8">
+          <div className="mb-8 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-neutral-900 text-white mb-4">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-semibold text-neutral-900">Jaga Produk UMKM</h1>
+            <p className="mt-2 text-sm text-neutral-500">Masuk untuk mengelola stok, penjualan, dan perkiraan kebutuhan.</p>
+          </div>
+          {error && (
+            <div className="bg-red-100 text-red-800 rounded border border-red-300 px-3 py-2 text-sm mb-6">
+              {error}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-600 mb-2">
+                Username
+              </label>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value.trim())}
+                type="text"
+                required
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500"
+                placeholder="admin"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-600 mb-2">
+                Password
+              </label>
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                required
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500"
+                placeholder="jaga123"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:ring-offset-1"
+            >
+              Masuk
+            </button>
+          </form>
+          <p className="mt-6 text-xs text-neutral-500">
+            Kredensial statis: admin / jaga123
+          </p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-neutral-700 mb-1">
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-              autoComplete="username"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-              autoComplete="current-password"
-            />
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-2.5 rounded-lg transition-colors"
-          >
-            Masuk
-          </button>
-        </form>
-        <p className="text-xs text-neutral-500 mt-4 text-center">
-          Demo: username <span className="font-mono">admin</span>, password <span className="font-mono">jaga123</span>
-        </p>
       </div>
     </div>
   );

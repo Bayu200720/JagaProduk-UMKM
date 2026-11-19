@@ -1,19 +1,23 @@
-// Penyimpanan localStorage (satu kunci) dengan fallback jika kosong/rusak
-import { AppState, DEFAULT_STATE, STORAGE_KEY } from '../config';
+import type { AppState, Product, SalesLog } from '../config';
+
+export const STORAGE_KEY = 'jagaproduk_state_v1';
+
+export const DEFAULT_STATE: AppState = {
+  products: [],
+  salesLogs: [],
+};
 
 export function loadState(): AppState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return structuredClone(DEFAULT_STATE);
-    const parsed = JSON.parse(raw) as AppState;
-    if (!parsed || typeof parsed !== 'object') return structuredClone(DEFAULT_STATE);
-    if (!Array.isArray(parsed.products)) parsed.products = structuredClone(DEFAULT_STATE.products);
-    if (!Array.isArray(parsed.salesLogs)) parsed.salesLogs = [];
-    // Pastikan userLoggedIn ada, kalau belum set false
-    if (parsed.userLoggedIn === undefined) parsed.userLoggedIn = false;
-    return parsed;
+    if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
+    const parsed = JSON.parse(raw);
+    return {
+      products: parsed.products || [],
+      salesLogs: parsed.salesLogs || [],
+    };
   } catch {
-    return structuredClone(DEFAULT_STATE);
+    return JSON.parse(JSON.stringify(DEFAULT_STATE));
   }
 }
 
@@ -21,6 +25,6 @@ export function saveState(state: AppState): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
-    // Abaikan jika penyimpanan penuh/terblokir
+    // silently ignore storage full / private mode
   }
 }

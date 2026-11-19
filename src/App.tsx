@@ -1,184 +1,112 @@
-import React, { useEffect, useState } from 'react';
-import type { AppState, Product, SalesLog, UserLogin } from './config';
-import { loadState, saveState } from './lib/storage';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Login } from './components/Login';
-import { Sidebar, type PageKey } from './components/Sidebar';
-import { ProductForm } from './components/ProductForm';
-import { SalesLogForm } from './components/SalesLogForm';
-import { DashboardAlerts } from './components/DashboardAlerts';
-import { ForecastPanel } from './components/ForecastPanel';
-import { ExportPanel } from './components/ExportPanel';
+import { Sidebar } from './components/Sidebar';
+import { Card } from './components/ui/Card';
+import { Button } from './components/ui/Button';
+import { PageHeader } from './components/ui/PageHeader';
+import { Badge } from './components/ui/Badge';
+import { authService } from './auth/auth';
+import { loadState, saveState } from './lib/storage';
+import type { AppState, Product } from './config';
+
+type PageId = 'dashboard' | 'dataPenjualan' | 'logPenjualan' | 'crudData' | 'exportData';
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function uid() { return Math.random().toString(36).slice(2, 10); }
+function formatDateId(d) { if(!d) return '-'; return new Date(d+'T00:00:00').toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }); }
+function daysUntil(dateStr) { if(!dateStr) return null; const t=new Date(todayStr+'T00:00:00'), n=new Date(dateStr+'T00:00:00'); return Math.ceil((n.getTime()-t.getTime())/(864e5)); }
+
+function calcForecast(s) {
+  const now=new Date(), thirty=new Date(now); thirty.setDate(now.getDate()-30);
+  const recent=s.salesLogs.filter(l=>new Date(l.date)>=thirty&&new Date(l.date)<=now);
+  const res={};
+  for(const p of s.products) {
+    const dates=new Set(recent.filter(l=>l.productId===p.id).map(l=>l.date));
+    const d=dates.size;
+    if(d<3) res[p.id]={avgPerDay:0,daysUsed:d,note:'Data kurang (butuh minimal 3 hari penjualan)'};
+    else {
+      const total=recent.filter(l=>l.productId===p.id).reduce((a,l)=>a+l.qty,0);
+      res[p.id]={avgPerDay:Math.round(total/d),daysUsed:d,note:''};
+    }
+  }
+  return res;
+}
 
 export default function App() {
-  const [state, setState] = useState<AppState>(() => loadState());
-  const [isLoggedIn, setLoggedIn] = useState(false);
-  const [activePage, setActivePage] = useState<PageKey>('dashboard');
+  const [isLoggedIn,setIsLoggedIn]=useState(authService.isAuthenticated());
+  const [page,setPage]=useState<'dashboard'|'dataPenjualan'|'logPenjualan'|'crudData'|'exportData'>('dashboard');
+  const [state,setState]=useState<AppState>(()=>loadState());
+  useEffect(()=>saveState(state),[state]);
+  const forecasts=useMemo(()=>calcForecast(state),[state]);
 
-  useEffect(() => {
-    saveState(state);
-  }, [state]);
+  if(!isLoggedIn) return <Login onLogin={()=>setIsLoggedIn(true)}/>;
 
-  const handleLogin = (credentials: UserLogin) => {
-    const correctUser = credentials.username === 'admin' && credentials.password === 'jaga123';
-    if (correctUser) {
-      setLoggedIn(true);
-    }
-  };
+  const lowStock=state.products.filter(p=>p.stock<=p.minStock);
+  const near=state.products.filter(p=>{const d=daysUntil(p.expiryDate);return d!==null&&d>=0&&d<=3;});
+  const expired=state.products.filter(p=>{const d=daysUntil(p.expiryDate);return d!==null&&d<0;});
 
-  const handleLogout = () => {
-    setLoggedIn(false);
-    setActivePage('dashboard');
-    setState(loadState());
-  };
+  const pageRender=({
+    dashboard:()=><Dashboard state={state} forecasts={forecasts} lowStock={lowStock} near={near} expired={expired}/>,
+    dataPenjualan:()=>(<SalesDataView state={state} setState={setState}/>),
+    logPenjualan:()=>(<SalesLogView state={state} setState={setState}/>),
+    crudData:()=>(<CrudView state={state} setState={setState}/>),
+    exportData:()=>(<ExportView state={state}/>),
+  }[page]);
 
-  if (!isLoggedIn) {
-    return <Login onLoginSuccess={handleLogin} />;
-  }
-
-  const handleAddProduct = (product: Product) => {
-    setState((prev) => ({ ...prev, products: [...prev.products, product] }));
-  };
-
-  const handleDeleteProduct = (id: string) => {
-    setState((prev) => ({ ...prev, products: prev.products.filter((p) => p.id !== id) }));
-  };
-
-  const handleAddSalesLog = (log: SalesLog) => {
-    setState((prev) => ({ ...prev, salesLogs: [...prev.salesLogs, log] }));
-  };
-
-  const handleDeleteSalesLog = (id: string) => {
-    setState((prev) => ({ ...prev, salesLogs: prev.salesLogs.filter((l) => l.id !== id) }));
-  };
-
-  const productList = state.products;
-  const salesLogList = state.salesLogs;
-
-  return (
-    <div className='min-h-screen bg-neutral-50'>
-      <header className='max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-3 border-b border-neutral-200'>
-        <div className='flex items-center justify-between'>
-          <h1 className='text-2xl font-semibold text-neutral-900'>Jaga Produk UMKM</h1>
-          <p className='text-neutral-600 text-sm sm:text-base'>
-            Pantau stok, peringatan kelaluwarnya, dan prediksi permintaan sederhana untuk warung kopi/kue Anda.
-          </p>
+  return(
+    <div className="min-h-screen bg-neutral-50 flex">
+      <Sidebar activePage={page} onNavigate={setPage} onLogout={()=>{authService.logout();setIsLoggedIn(false)}}/>
+      <main className="flex-1 min-w-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <pageRender/>
         </div>
-      </header>
-
-      <main className='max-w-7xl mx-auto px-4 sm:px-6 pb-10'>
-        <Sidebar
-          activePage={activePage}
-          onNavigate={setActivePage}
-          onLogout={handleLogout}
-        />
-
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 w-full'>
-          <div>
-            {activePage === 'dashboard' && <DashboardAlerts products={state.products} />}
-            {activePage === 'logPenjualan' && (
-              <div className='space-y-4'>
-                <SalesLogForm products={state.products} onAdd={handleAddSalesLog} />
-                <h2 className="text-lg font-semibold text-neutral-900">Riwayat Penjualan</h2>
-                <div className='overflow-x-auto'>
-                  <table className='w-full text-sm text-neutral-600'>
-                    <thead className='border-b border-neutral-200'>
-                      <tr>
-                        <th className='p-2 text-left'>Tanggal</th>
-                        <th className='p-2 text-left'>Produk</th>
-                        <th className='p-2 text-left'>Qty</th>
-                        <th className='p-2 text-left'>Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {salesLogList.map((log) => {
-                        const p = state.products.find((pr) => pr.id === log.productId);
-                        return (
-                          <tr key={log.id}>
-                            <td className='p-2'>{log.date}</td>
-                            <td className='p-2'>{p ? p.name : log.productId}</td>
-                            <td className='p-2'>{log.qty}</td>
-                            <td className='p-2'>
-                              <button
-                                className='text-red-600 hover:underline'
-                                onClick={() => handleDeleteSalesLog(log.id)}
-                              >
-                                Hapus
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-            {activePage === 'crudData' && (
-              <div className='space-y-4'>
-                <ProductForm onAdd={handleAddProduct} />
-                <h2 className="text-lg font-semibold text-neutral-900">Daftar Produk</h2>
-                <div className='overflow-x-auto'>
-                  <table className='w-full text-sm text-neutral-600'>
-                    <thead className='border-b border-neutral-200'>
-                      <tr>
-                        <th className='p-2 text-left'>Nama</th>
-                        <th className='p-2 text-left'>Kategori</th>
-                        <th className='p-2 text-left'>Stok</th>
-                        <th className='p-2 text-left'>Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {productList.map((p) => (
-                        <tr key={p.id}>
-                          <td className='p-2'>{p.name}</td>
-                          <td className='p-2'>{p.category}</td>
-                          <td className='p-2'>{p.stock}</td>
-                          <td className='p-2'>
-                            <button
-                              className='text-blue-600 hover:underline'
-                              onClick={() => {}}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className='text-red-600 hover:underline ml-2'
-                              onClick={() => handleDeleteProduct(p.id)}
-                            >
-                              Hapus
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-            {activePage === 'exportData' && <ExportPanel state={state} />}
-          </div>
-
-          <div>
-            {activePage === 'dashboard' && (
-              <div className='space-y-4'>
-                <DashboardAlerts products={state.products} />
-                <ForecastPanel state={state} />
-              </div>
-            )}
-            {activePage === 'dashboard' && <ForecastPanel state={state} />}
-          </div>
-        </div>
-
-        <footer className='mt-8 pt-6 border-t border-neutral-200 text-center text-sm text-neutral-600'>
-          <p>
-            Halaman:
-            <span className='font-medium' onClick={() => setActivePage('dashboard')}> Dashboard</span>{' '}
-            <span className='ml-2' onClick={() => setActivePage('dataPenjualan')}> Data Penjualan</span>{' '}
-            <span className='ml-2' onClick={() => setActivePage('logPenjualan')}> Log Penjualan</span>{' '}
-            <span className='ml-2' onClick={() => setActivePage('crudData')}> CRUD Data</span>{' '}
-            <span className='ml-2' onClick={() => setActivePage('exportData')}> Export Data</span>{' '}
-          </p>
-        </footer>
       </main>
     </div>
   );
+}
+
+function Dashboard({state,forecasts,lowStock,near,expired}) {
+  return(
+    <Card title="Dashboard" className="space-y-6">
+      <Card title="Stok Minimum" className="space-y-3">
+        {lowStock.length===0?<p className="text-neutral-500">Semua produk aman</p>:(<ul>{lowStock.map(p=><li key={p.id}>{p.name}: stok {p.stock} <= min {p.minStock}</li>)}</ul>)}
+      </Card>
+      <Card title="Mendekati Kadaluarsa" className="space-y-3">
+        {near.length===0?<p className="text-neutral-500">Baik</p>:(<ul>{near.map(p=><li key={p.id}>{p.name} ({formatDateId(p.expiryDate)})</li>)}</ul>)}
+      </Card>
+      <Card title="Sudah Kadaluarsa" className="space-y-3">
+        {expired.length===0?<p className="text-neutral-500">Baik</p>:(<ul>{expired.map(p=><li key={p.id}>{p.name}: sudah kadaluarsa</li>)}</ul>)}
+      </Card>
+      <Card title="Forecast Permintaan 7 Hari" className="space-y-3">
+        {state.products.length===0?<p className="text-neutral-500">Belum ada produk</p>:(<ul>{state.products.map(p=><li key={p.id}><Badge variant="neutral">{p.name}</Badge> {forecasts[p.id].avgPerDay} {p.unit}/hari {forecasts[p.id].note}</li>)}</ul>)}
+      </Card>
+    </Card>
+  );
+}
+
+function SalesDataView({state,setState}) {
+  return(<Card title="Data Penjualan" className="p-6"><p className="text-sm text-neutral-500">Tabel data penjualan akan muncul di sini. Total log: {state.salesLogs.length}</p></Card>);
+}
+
+function SalesLogView({state,setState}) {
+  return(
+    <Card title="Log Penjualan Harian" className="space-y-4">
+      <form className="space-y-3">
+        <select className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-500" disabled>
+          <option>Produk harus login terlebih dahulu</option>
+        </select>
+        <input type="number" min="1" className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-500" disabled/>
+        <input type="date" className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-500" disabled/>
+        <button className="btn-primary" disabled>Simpan</button>
+      </form>
+    </Card>
+  );
+}
+
+function CrudView({state,setState}) {
+  return(<Card title="CRUD Data Produk" className="p-6"><p className="text-sm text-neutral-500">CRUD interface akan muncul di sini. Produk: {state.products.length}</p></Card>);
+}
+
+function ExportView({state}) {
+  return(<Card title="Export Data" className="p-6"><p className="text-sm text-neutral-500">Export CSV akan di-generate di sini. 3 file: penjualan, stok, alert.</p></Card>);
 }
