@@ -1,1 +1,0 @@
-{"root":["./src/app.tsx","./src/config.ts","./src/main.tsx","./src/components/dashboardalerts.tsx","./src/components/exportpanel.tsx","./src/components/forecastpanel.tsx","./src/components/productform.tsx","./src/components/saleslogform.tsx","./src/lib/csv.ts","./src/lib/forecast.ts","./src/lib/format.ts","./src/lib/storage.ts"],"version":"5.9.3"}

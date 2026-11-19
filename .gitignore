@@ -1,0 +1,15 @@
+# Dependencies (installed by npm during the build)
+node_modules/
+
+# Build output
+dist/
+
+# TypeScript build artifacts emitted by `tsc -b`
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Logs and OS/editor files
+npm-debug.log*
+.DS_Store
+Thumbs.db
